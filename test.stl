@@ -1,0 +1,23 @@
+solid Eggstreme
+facet normal 8.065672E-02 6.992769E-02 9.942860E-01
+ outer loop
+  vertex 0.000000E+00 0.000000E+00 3.048000E+00
+  vertex 1.096412E+00 0.000000E+00 2.959059E+00
+  vertex 5.471971E-01 9.477731E-01 2.936955E+00
+ endloop
+endfacet
+facet normal 3.541544E-17 1.163684E-01 9.932061E-01
+ outer loop
+  vertex 0.000000E+00 0.000000E+00 3.048000E+00
+  vertex 5.471971E-01 9.477731E-01 2.936955E+00
+  vertex -5.471971E-01 9.477731E-01 2.936955E+00
+ endloop
+endfacet
+facet normal -8.065672E-02 6.992769E-02 9.942860E-01
+ outer loop
+  vertex 0.000000E+00 0.000000E+00 3.048000E+00
+  vertex -5.471971E-01 9.477731E-01 2.936955E+00
+  vertex -1.096412E+00 1.342717E-16 2.959059E+00
+ endloop
+endfacet
+endsolid Eggstreme

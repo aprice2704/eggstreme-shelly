@@ -1,0 +1,260 @@
+
+// TestIntersects tests the intersect function
+// func (e *EShell) TestIntersects(n int) {
+// 	origin := v3.NewSimVec(0, 0, 0)
+// 	for i := 0; i < n; i++ {
+// 		p := &e.Panels[i]
+// 		tgc := e.Vertices[p.Corners[0]].Position
+// 		for j := 1; j < len(p.Corners); j++ {
+// 			tgc = tgc.Add(e.Vertices[p.Corners[j]].Position).(v3.SimVec)
+// 		}
+// 		gc := tgc.Scale(1.0 / float64(len(p.Corners)))
+// 		seg := v3.NewSegment(v3.NewLine(origin, tgc), 0, 1000)
+// 		v := &e.Vertices[p.Corners[0]]
+// 		tri := v3.NewPatch(v.Position, p.Normal,
+// 			e.Edges[p.Edges[0]].From(v.Serial), e.Edges[p.Edges[1]].From(v.Serial))
+// 		where, hit := tri.TriIntersectSegment(seg)
+// 		fmt.Printf("tgc %s\n", tgc)
+// 		fmt.Printf("\nPanel %d, geom center %s\n  intersect? %t, where %s\n", i, gc, hit, where)
+// 		fmt.Printf("Segment is %s\nPatch is %s\n", seg, tri)
+// 	}
+// }
+
+// // TestIntersects2 tests the intersect function
+// func (e *EShell) TestIntersects2(n int) {
+// 	origin := v3.NewSimVec(0, 0, 0)
+// 	p := &e.Panels[0]
+// 	tgc := e.Vertices[p.Corners[0]].Position
+// 	for j := 1; j < len(p.Corners); j++ {
+// 		tgc = tgc.Add(e.Vertices[p.Corners[j]].Position).(v3.SimVec)
+// 	}
+// 	//	gc := tgc.Scale(1.0 / float64(len(p.Corners)))
+// 	seg := v3.NewSegment(v3.NewLine(origin, tgc), 0, 1000)
+// 	fmt.Printf("Center of panel 0: is %s\n\n\n", seg)
+
+// 	for i := 0; i < n; i++ {
+// 		p := &e.Panels[i]
+// 		v := &e.Vertices[p.Corners[0]]
+// 		tri := v3.NewPatch(v.Position, p.Normal,
+// 			e.Edges[p.Edges[0]].From(v.Serial), e.Edges[p.Edges[1]].From(v.Serial))
+// 		where, hit := tri.TriIntersectSegment(seg)
+// 		//	fmt.Printf("tgc %s\n", tgc)
+// 		fmt.Printf("Patch vertex is %d is %s\n", v.Serial, tri)
+// 		fmt.Printf("Panel %d, intersect? %t, where %s\n", i, hit, where)
+// 		w1, h1 := tri.Plane.IntersectSegment(seg)
+// 		fmt.Printf("Seg/pane hits %t at %s\n\n", h1, w1)
+// 	}
+// }
+
+// Prep makes a g3n geometry object from EShell
+// func (e *EShell) Prep(mat *material.Standard) *EShellMesh {
+// 	geom := geometry.NewGeometry()
+// 	needV := 3 * len(e.Vertices)
+// 	positions := math32.NewArrayF32(needV, needV)
+// 	//	normals := math32.NewArrayF32(needV, needV)
+// 	needP := 3 * len(e.Panels)
+// 	indices := math32.NewArrayU32(needP, needP)
+// 	for _, vertex := range e.Vertices {
+// 		positions = append(positions,
+// 			float32(vertex.Position.X()),
+// 			float32(vertex.Position.Z()),
+// 			float32(vertex.Position.Y()))
+// 		// norm := vertex.Position.New(0.0, 0.0, 0.0)
+// 		// for _, pNo := range vertex.Panels {
+// 		// 	norm = norm.Add(e.Panels[pNo].Normal)
+// 		// }
+// 		// if len(vertex.Panels) > 0 {
+// 		// 	norm = norm.Scale(1.0 / float64(len(vertex.Panels)))
+// 		// }
+// 		// normals = append(normals,
+// 		// 	float32(norm.X()),
+// 		// 	float32(norm.Z()),
+// 		// 	float32(norm.Y()))
+// 	}
+// 	for _, panel := range e.Panels {
+// 		if panel.Alive {
+// 			indices = append(indices,
+// 				uint32(panel.Corners[0]),
+// 				uint32(panel.Corners[1]),
+// 				uint32(panel.Corners[2]))
+// 		}
+// 	}
+// 	geom.SetIndices(indices)
+// 	geom.AddVBO(gls.NewVBO(positions).AddAttrib(gls.VertexPosition))
+// 	// geom.AddVBO(gls.NewVBO(positions).AddAttrib(gls.VertexPosition).AddAttrib(gls.VertexNormal))
+// 	//	geom.AddVBO(gls.NewVBO(normals).AddAttrib(gls.VertexNormal))
+// 	shell := EShellMesh{}
+// 	shell.Mesh.Init(geom, mat)
+// 	return &shell
+// }
+
+//func (e EShell) {}
+
+// Stl returns an stl representation of a panel as a single line of text
+// func (p Panel) Stl() string {
+// 	return fmt.Sprintf("facet normal %s  outer loop  vertex %s vertex %s vertex %s  endloop  endfacet\n",
+// 		ell.V2stl(&p.Normal), ell.V2stl(&Vertices[p.Corners[0]]), ell.V2stl(&Vertices[p.Corners[1]]), ell.V2stl(&Vertices[p.Corners[2]]))
+// }
+
+// RemoveUnderwater button
+// drownEdgesBtn := gui.NewButton("Drown Underwater")
+// drownEdgesBtn.SetPosition(50, 100)
+// drownEdgesBtn.SetSize(40, 20)
+// drownEdgesBtn.Subscribe(gui.OnClick, func(name string, ev interface{}) {
+// 	eshell.RemoveUnderwater()
+// 	redraw = true
+// })
+// mygui.Add(drownEdgesBtn)
+
+// Step button
+// stepBtn := gui.NewButton("Step")
+// stepBtn.SetPosition(50, 130)
+// stepBtn.SetSize(40, 20)
+// stepBtn.Subscribe(gui.OnClick, func(name string, ev interface{}) {
+// 	steps = 1
+// })
+// mygui.Add(stepBtn)
+
+// RemoveShortEdges removes those shorter than given length
+//func (e *EShell) RemoveShortEdges(short float64) bool {
+// 	var some bool
+// 	for _, ed := range e.Edges {
+// 		if ed.Alive && (len(ed.Panels) == 1) && (ed.Along.Length() < short) { // eliminate this edge
+// 			oldE := ed
+// 			oldP := e.Panels[ed.Panels[0]]
+// 			oldV0 := e.Vertices[ed.Vertices[0]]
+// 			oldV1 := e.Vertices[ed.Vertices[1]]
+// 			newV := e.AddVertex(oldV0.Position.Add(oldE.Along.Scale(0.5))) // new vertex half way along short edge
+// newE :=
+// 			e.RemoveEdge(oldE.Serial)
+// 			e.RemovePanel(oldP.Serial)
+// 			e.RemoveVertex(oldV0.Serial)
+// 			e.RemoveVertex(oldV1.Serial)
+// 			some = true
+// 		}
+// 	}
+// 	if some {
+// 		a := e.CoupDeGrace()
+// 		b := e.Undertaker()
+// 		for a || b {
+// 			a = e.CoupDeGrace()
+// 			b = e.Undertaker()
+// 		}
+// 	}
+// 	return true
+// }
+
+// RemoveUnderwater removes those on only one panel, below the waterline (give positive distance midplane is above z=0)
+// func (e *EShell) RemoveUnderwater() {
+// 	for _, ed := range e.Edges {
+// 		if (ed.Alive) && (len(ed.Panels) == 1) { // edges of only one panel
+// 			if (e.Vertices[ed.Vertices[0]].Position.Z() < e.Base) ||
+// 				(e.Vertices[ed.Vertices[1]].Position.Z() < e.Base) {
+// 				e.RemoveEdge(ed.Serial)
+// 				fmt.Printf("Drowning edge %d\n", ed.Serial)
+// 			}
+// 		}
+// 	}
+// for _, v := range e.Vertices {
+// 	if v.Alive && (v.Position.Z() < e.Base) {
+// 		e.RemoveVertex(v.Serial)
+// 		fmt.Printf("Drowning vertex %d\n", v.Serial)
+// 	}
+// }
+// for _, p := range e.Panels {
+// 	above := false
+// 	for _, ed := range p.Edges {
+// 		for _, v := range e.Edges[ed.Vertices {
+// 			if e.Vertices[v.Serial].Position.Z() > e.Base {
+// 				above = true
+// 			}
+// 		}
+// 		if !above {
+// 			e.RemovePanel(p.Serial)
+// 		}
+// 	}
+// }
+// 	a := e.CoupDeGrace()
+// 	b := e.Undertaker()
+// 	for a || b {
+// 		a = e.CoupDeGrace()
+// 		b = e.Undertaker()
+// 	}
+// }
+
+// CoupDeGrace kills any injured elements
+// func (e *EShell) CoupDeGrace() bool {
+// 	some := false
+// 	for _, v := range e.Vertices {
+// 		if v.Alive && ((len(v.Edges) < 2) || (len(v.Panels) < 1)) {
+// 			e.RemoveVertex(v.Serial)
+// 			//			fmt.Printf("Killing vertex %d\n", v.Serial)
+// 			some = true
+// 		}
+// 	}
+// 	for _, ed := range e.Edges {
+// 		if ed.Alive && ((len(ed.Panels) < 1) || (len(ed.Vertices) < 2)) {
+// 			e.RemoveEdge(ed.Serial)
+// 			//			fmt.Printf("Killing edge %d\n", ed.Serial)
+// 			some = true
+// 		}
+// 	}
+// 	for _, p := range e.Panels {
+// 		if p.Alive && (len(p.Edges) < 3) {
+// 			e.RemovePanel(p.Serial)
+// 			//			fmt.Printf("Killing panel %d\n", p.Serial)
+// 			some = true
+// 		}
+// 	}
+// 	return some
+// }
+
+// Undertaker removes any dangly bits left over after removing edges etc.
+// func (e *EShell) Undertaker() bool {
+// 	some := false
+// 	for _, v := range e.Vertices {
+// 		for _, eNo := range v.Edges {
+// 			if !e.Edges[eNo].Alive {
+// 				e.Vertices[v.Serial].Edges = remove(v.Edges, eNo)
+// 				//				fmt.Printf("Sweeping edge %d from vertex %d\n", eNo, v.Serial)
+// 				some = true
+
+// 			}
+// 		}
+// 		for _, pNo := range v.Panels {
+// 			if !e.Panels[pNo].Alive {
+// 				e.Vertices[v.Serial].Panels = remove(v.Panels, pNo)
+// 				//				fmt.Printf("Sweeping panel %d from vertex %d\n", pNo, v.Serial)
+// 				some = true
+// 			}
+// 		}
+// 	}
+
+// 	for _, ed := range e.Edges {
+// 		for _, vNo := range ed.Vertices {
+// 			if !e.Vertices[vNo].Alive {
+// 				e.Edges[ed.Serial].Vertices = remove(ed.Vertices, vNo)
+// 				//				fmt.Printf("Sweeping vertex %d from edge %d\n", vNo, ed.Serial)
+// 				some = true
+// 			}
+// 		}
+// 		for _, pNo := range ed.Panels {
+// 			if !e.Panels[pNo].Alive {
+// 				e.Edges[ed.Serial].Panels = remove(ed.Panels, pNo)
+// 				//				fmt.Printf("Sweeping panel %d from edge %d\n", pNo, ed.Serial)
+// 				some = true
+// 			}
+// 		}
+// 	}
+
+// 	for _, p := range e.Panels {
+// 		for _, eNo := range p.Edges {
+// 			if !e.Edges[eNo].Alive {
+// 				e.Panels[p.Serial].Edges = remove(p.Edges, eNo)
+// 				//				fmt.Printf("Sweeping edge %d from panel %d\n", eNo, p.Serial)
+// 				some = true
+// 			}
+// 		}
+// 	}
+// 	return some
+// }
