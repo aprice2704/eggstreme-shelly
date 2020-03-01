@@ -17,6 +17,7 @@ import (
 	"github.com/g3n/engine/graphic"
 	"github.com/g3n/engine/material"
 
+	cam "./cam"
 	ell "./ellipsoid"
 	v3 "./vec"
 
@@ -49,18 +50,6 @@ const (
 	deg90    = math.Pi / 2
 )
 
-type density struct {
-	display string  // Name to display
-	element string  // chemical symbol
-	rho     float64 // density of substance in kg/m3
-}
-
-type gauge struct {
-	display   string  // Name to display
-	id        string  // integer
-	thickness float64 // m
-}
-
 var showTris []v3.Patch
 var showSegs []v3.Segment
 
@@ -80,24 +69,6 @@ func main() {
 	cos := math.Cos
 	sin := math.Sin
 	deg60 := pi / 3
-
-	gauges := []gauge{
-		{display: "28ga", id: "28", thickness: 0.378 / 1000},
-		{display: "24ga", id: "24", thickness: 0.607 / 1000},
-		{display: "22ga", id: "22", thickness: 0.759 / 1000},
-		{display: "20ga", id: "20", thickness: 0.911 / 1000},
-		{display: "18ga", id: "18", thickness: 1.214 / 1000},
-		{display: "16ga", id: "16", thickness: 1.518 / 1000},
-		{display: "14ga", id: "14", thickness: 1.897 / 1000},
-		{display: "0.5in", id: "0000000", thickness: 12.7 / 1000},
-		{display: "1in", id: "00000000", thickness: 25.5 / 1000},
-	}
-
-	densities := []density{
-		{display: "Steel", element: "Fe", rho: 7874},
-		{display: "Aluminium", element: "Al", rho: 2700},
-		{display: "Titanium", element: "Ti", rho: 4506},
-	}
 
 	statikFS, err := fs.New()
 	if err != nil {
@@ -286,7 +257,7 @@ func main() {
 
 		scene.Add(ground)
 
-		stats.SetText(eshell.Stats(gauges, densities))
+		stats.SetText(eshell.Stats(cam.Materials))
 
 	}
 
@@ -371,7 +342,7 @@ func main() {
 		// ground.SetVisible(shell)
 		scene.Add(ground)
 
-		stats.SetText(eshell.Stats(gauges, densities))
+		stats.SetText(eshell.Stats(cam.Materials))
 
 		//scramble = false
 
@@ -498,21 +469,21 @@ func main() {
 	// ╚══════╝ ╚═════╝╚══════╝╚═╝  ╚═══╝╚══════╝
 
 	// Create perspective camera
-	cam := camera.New(1)
-	cam.SetPosition(-10, 10, 10)
-	scene.Add(cam)
+	camA := camera.New(1)
+	camA.SetPosition(-10, 10, 10)
+	scene.Add(camA)
 	orig := math32.Vector3{X: 0, Y: 0, Z: 0}
 	zaxis := math32.Vector3{X: 0, Y: 1, Z: 0}
-	cam.LookAt(&orig, &zaxis)
+	camA.LookAt(&orig, &zaxis)
 
 	// Set up orbit control for the camera
-	camera.NewOrbitControl(cam)
+	camera.NewOrbitControl(camA)
 
 	// Scene setup
 	onResize := func(evname string, ev interface{}) {
 		width, height := a.GetSize()
 		a.Gls().Viewport(0, 0, int32(width), int32(height))
-		cam.SetAspect(float32(width) / float32(height))
+		camA.SetAspect(float32(width) / float32(height))
 	}
 	a.Subscribe(window.OnWindowSize, onResize)
 	onResize("", nil)
@@ -533,7 +504,7 @@ func main() {
 		width, height := a.GetSize()
 		rcx := 2*(mev.Xpos/float32(width)) - 1
 		rcy := -2*(mev.Ypos/float32(height)) + 1
-		rc.SetFromCamera(cam, rcx, rcy)
+		rc.SetFromCamera(camA, rcx, rcy)
 
 		var ray math32.Ray
 		ray.Copy(&rc.Ray).ApplyMatrix4(&inverseMatrix)
@@ -572,7 +543,7 @@ func main() {
 	//	a.Gls().ClearColor(0.53, 0.81, 0.92, 0.0) // sky blue
 	a.Gls().ClearColor(0.0, 0.0, 0.0, 0.0) // sky blue
 
-	stats.SetText(eshell.Stats(gauges, densities))
+	stats.SetText(eshell.Stats(cam.Materials))
 
 	// Compute the meshes etc.
 	setupFunc()
@@ -582,7 +553,7 @@ func main() {
 	// Run the application
 	a.Run(func(renderer *renderer.Renderer, deltaTime time.Duration) {
 		a.Gls().Clear(gls.DEPTH_BUFFER_BIT | gls.STENCIL_BUFFER_BIT | gls.COLOR_BUFFER_BIT)
-		renderer.Render(scene, cam)
+		renderer.Render(scene, camA)
 	})
 
 }
