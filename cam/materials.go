@@ -73,6 +73,7 @@ type SurfaceFinish struct {
 
 func init() {
 
+	Materials = make(MaterialSet)
 	Materials["Stainless"] = Material{}
 
 	// mildgauges := []gauge{

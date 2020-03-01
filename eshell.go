@@ -228,7 +228,7 @@ func (ed *Edge) Update(e *EShell) {
 // OtherEnd -- finds the vertex of the end other than the one supplied
 func (ed Edge) OtherEnd(this *Vertex) *Vertex {
 	nd := ed.Vertices[0]
-	if nd == this {
+	if nd.Serial == this.Serial {
 		nd = ed.Vertices[1]
 	}
 	return nd
@@ -237,8 +237,8 @@ func (ed Edge) OtherEnd(this *Vertex) *Vertex {
 // From returns the along vector of this edge, flipped if required, pointing away from the given vertex
 func (ed Edge) From(v *Vertex) v3.Vec {
 	fr := ed.Along
-	if ed.Vertices[0] != v {
-		if ed.Vertices[1] != v {
+	if ed.Vertices[0].Serial != v.Serial {
+		if ed.Vertices[1].Serial != v.Serial {
 			err := tracerr.Errorf("Geometry error: vertex %d is not on edge %d at all", v.Serial, ed.Serial)
 			tracerr.PrintSourceColor(err, 5, 2)
 			log.Fatal(err)
@@ -369,7 +369,7 @@ func (p Panel) STLString() string {
 // HasVertex -- does this edge have an end at the given vertex
 func (ed Edge) HasVertex(v *Vertex) bool {
 	for _, vn := range ed.Vertices {
-		if vn == v {
+		if vn.Serial == v.Serial {
 			return true
 		}
 	}
@@ -402,7 +402,7 @@ func (ed Edge) HasVertex(v *Vertex) bool {
 // append only if value is not already in the list
 func appendUniquePanel(l []*Panel, x *Panel) []*Panel {
 	for _, v := range l {
-		if x == v {
+		if x.Serial == v.Serial {
 			return l
 		}
 	}
@@ -412,7 +412,7 @@ func appendUniquePanel(l []*Panel, x *Panel) []*Panel {
 // append only if value is not already in the list
 func appendUniqueVertex(l []*Vertex, x *Vertex) []*Vertex {
 	for _, v := range l {
-		if x == v {
+		if x.Serial == v.Serial {
 			return l
 		}
 	}
@@ -434,7 +434,7 @@ func (e *EShell) AddPanel(es []*Edge) *Panel {
 	p.Shell = e
 	p.Serial = len(e.Panels)
 	p.Alive = true
-	for _, f := range es { // record the new panel on each edge
+	for _, f := range p.Edges { // record the new panel on each edge
 		f.Panels = appendUniquePanel(f.Panels, &p)
 		for _, v := range f.Vertices { // record the new panel on each vertex
 			v.Panels = appendUniquePanel(v.Panels, &p)
@@ -468,10 +468,10 @@ func (e *EShell) RemoveEdge(ed *Edge) {
 	ed.Alive = false
 }
 
-// append an int to an []int only if it that value is not already in the list
+// append an edge only if not already in the list
 func appendUniqueEdge(l []*Edge, x *Edge) []*Edge {
 	for _, v := range l {
-		if x == v {
+		if x.Serial == v.Serial {
 			return l
 		}
 	}
@@ -539,7 +539,8 @@ func (e *EShell) Spike(desiredL float64, tolerance float64) bool {
 						newV := e.AddVertex(newPoint, Constraints{&OnEllipsoid})
 						edge2 := e.AddEdge([]*Vertex{v, newV})
 						edge3 := e.AddEdge([]*Vertex{newV, edge.Vertices[1]})
-						e.AddPanel([]*Edge{&edge, edge2, edge3})
+						p := e.AddPanel([]*Edge{&edge, edge2, edge3})
+						fmt.Printf("Spike!!:%s\n", p.NiceString())
 						any = true
 						break
 					}
@@ -920,8 +921,10 @@ func (e *EShell) MakeMesh(desiredL float64, tolerance float64) {
 	e.AddPanels([][]int{{6, 0, 7}, {7, 1, 8}, {8, 2, 9}, {9, 3, 10}, {10, 4, 11}, {11, 5, 6}})
 	didSomething := true
 	for didSomething {
-		a := e.AntiSpike()
-		b := e.FillIn(desiredL, tolerance)
+		//	a := e.AntiSpike()
+		//	b := e.FillIn(desiredL, tolerance)
+		a := true
+		b := true
 		c := e.Spike(desiredL, tolerance)
 		break
 		didSomething = a || b || c
