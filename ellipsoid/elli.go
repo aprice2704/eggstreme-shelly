@@ -20,9 +20,11 @@ var (
 	Z = v3.NewSimVec(0, 0, 1)
 )
 
-// Ellipsoid is the surface of an ellipsoid centered at the origin and aligned with the X, Y and Z axes.
+// Ellipsoid is the surface of an ellipsoid centered at the origin and
+// aligned with the X (L), Y (W), and Z (H) axes.
 type Ellipsoid struct {
-	L, W, H       float64 // RADIAL size, not diameteral
+	L, W, H       float64 // RADIAL size, not diameteral. Axes: X = L, W = Y, H = Z
+	AspectRatio   float64 // Length/Width
 	LL, WW, HH    float64 // squares of dims
 	oL, oW, oH    float64 // one over the each dimensions
 	oLL, oWW, oHH float64 // one over the square of each dimension
@@ -33,6 +35,7 @@ func (e *Ellipsoid) Set(l, w, h float64) {
 	e.L = l
 	e.W = w
 	e.H = h
+	e.AspectRatio = l / w
 	e.LL = l * l
 	e.WW = w * w
 	e.HH = h * h
@@ -65,6 +68,13 @@ func (e Ellipsoid) Surface(dir v3.Vec) v3.Vec {
 	k := math.Sqrt(1 / ((v.X() * v.X() * e.oLL) + (v.Y() * v.Y() * e.oWW) + (v.Z() * v.Z() * e.oHH)))
 	//	fmt.Printf("k is %f, ", k)
 	return v.Scale(k)
+}
+
+// NormalAt returns a vector length 1 which is normal to the ellipsoid at the midplane point
+//   defined by the angle a from the y axis following mathematical convention -- x axis is
+//   zero angle, angle increases anti-clockwise
+func (e Ellipsoid) NormalAt(a v3.Radians) v3.Vec {
+	return v3.NewSimVec(v3.Cos(a)*e.L*e.AspectRatio, v3.Sin(a)*e.W, 0).Normalized()
 }
 
 // PointDistant -- find a point s along the line starting at p defined by g projected onto e that is L from p (straight line) +- no more than l*tolerance

@@ -31,7 +31,25 @@ type Vec interface {
 	Subtract(w Vec) Vec
 	String() string
 	Stl() string
+	RotateZ(a Radians) Vec // Rotate about the Z axis by a radians
 }
+
+// Radians are angles 0-2pi
+type Radians float64
+
+// Common constants
+const (
+	Deg180 Radians = math.Pi
+	Deg90  Radians = math.Pi / 2
+	Deg60  Radians = math.Pi / 3
+	Deg0   Radians = 0.0
+)
+
+// Degrees are angles 0-360
+type Degrees float64
+
+// Meters are lengths in m
+type Meters float64
 
 // unit axes etc.
 var (
@@ -39,7 +57,18 @@ var (
 	Y      = NewSimVec(0, 1, 0)
 	Z      = NewSimVec(0, 0, 1)
 	Origin = NewSimVec(0, 0, 0)
+	Zero   = NewSimVec(0, 0, 0)
 )
+
+// Sin of radians
+func Sin(r Radians) float64 {
+	return math.Sin(float64(r))
+}
+
+// Cos of radians
+func Cos(r Radians) float64 {
+	return math.Cos(float64(r))
+}
 
 // ███████╗██╗███╗   ███╗██╗   ██╗███████╗ ██████╗
 // ██╔════╝██║████╗ ████║██║   ██║██╔════╝██╔════╝
@@ -150,6 +179,13 @@ func (v SimVec) Cross(w Vec) Vec {
 	return v.New(cx, cy, cz)
 }
 
+// RotateZ rotates about Z axis
+func (v SimVec) RotateZ(a Radians) Vec {
+	ca := math.Cos(float64(a))
+	sa := math.Sin(float64(a))
+	return v.New(v.x*ca-v.y*sa, v.x*sa+v.y*ca, v.z)
+}
+
 //  ██████╗██████╗ ██╗   ██╗██╗   ██╗███████╗ ██████╗
 // ██╔════╝██╔══██╗██║   ██║██║   ██║██╔════╝██╔════╝
 // ██║     ██████╔╝██║   ██║██║   ██║█████╗  ██║
@@ -168,16 +204,6 @@ type CPUVec struct {
 // Used only for calls to new
 var cpuvec = CPUVec{}
 
-// Stl renders at Vector3 as a string suitable for output in an stl file
-// func (v CPUVec) Stl() string {
-// 	return fmt.Sprintf("%f %f %f", v.X(), v.Y(), v.Z())
-// }
-
-// // String renders a Vec as a string
-// func (v CPUVec) String() string {
-// 	return fmt.Sprintf("[X:%.3g, Y:%.3g, Z:%.3g 📏%.3g]", v.x, v.y, v.z, v.Length())
-// }
-
 // New makes a new one from the given components. Values in receiver are ignored.
 func (v CPUVec) New(x, y, z float64) Vec {
 	n := CPUVec{}
@@ -191,36 +217,6 @@ func (v CPUVec) New(x, y, z float64) Vec {
 	n.zN = z / n.l
 	return n
 }
-
-// X returns the X component
-// func (v CPUVec) X() float64 {
-// 	return v.x
-// }
-
-// // Y returns the Y component
-// func (v CPUVec) Y() float64 {
-// 	return v.y
-// }
-
-// // Z returns the Z component
-// func (v CPUVec) Z() float64 {
-// 	return v.z
-// }
-
-// // SetX is obvious
-// func (v CPUVec) SetX(newVal float64) {
-// 	v.x = newVal
-// }
-
-// // SetY is obvious
-// func (v CPUVec) SetY(newVal float64) {
-// 	v.y = newVal
-// }
-
-// // SetZ is obvious
-// func (v CPUVec) SetZ(newVal float64) {
-// 	v.z = newVal
-// }
 
 // NewCPUVec makes one
 func NewCPUVec(x, y, z float64) CPUVec {
@@ -273,4 +269,21 @@ func (v CPUVec) Add(w Vec) Vec {
 // Subtract returns v-w
 func (v CPUVec) Subtract(w Vec) Vec {
 	return v.New(v.x-w.X(), v.y-w.Y(), v.z-w.Z())
+}
+
+// ██╗   ██╗████████╗██╗██╗     ███████╗
+// ██║   ██║╚══██╔══╝██║██║     ██╔════╝
+// ██║   ██║   ██║   ██║██║     ███████╗
+// ██║   ██║   ██║   ██║██║     ╚════██║
+// ╚██████╔╝   ██║   ██║███████╗███████║
+//  ╚═════╝    ╚═╝   ╚═╝╚══════╝╚══════╝
+
+// Deg2Rad converts degrees to radians
+func Deg2Rad(d Degrees) Radians {
+	return Radians(d * math.Pi / 180)
+}
+
+// Rad2Deg converts radians to degrees
+func Rad2Deg(r Radians) Degrees {
+	return Degrees(r * 180 / math.Pi)
 }

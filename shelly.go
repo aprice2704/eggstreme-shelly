@@ -19,6 +19,7 @@ import (
 
 	cam "./cam"
 	ell "./ellipsoid"
+	gl "./gl"
 	v3 "./vec"
 
 	_ "./statik"
@@ -98,8 +99,6 @@ func main() {
 	// Show normal helpers
 	norms := false
 
-	doorColour := math32.Color{R: 0.7, G: 0.7, B: 0.9}
-
 	ellipsoid := ell.Ellipsoid{}
 	ellipsoid.Set(semiWidth, semiLength, semiHeight)
 	wht := math32.Color{R: 1, G: 1, B: 1}
@@ -124,6 +123,19 @@ func main() {
 	// Add some furniture
 	var grid *helper.Grid
 	var ground *graphic.Mesh
+
+	// Lights! ...
+
+	scene.Add(light.NewAmbient(&math32.Color{R: 1.0, G: 1.0, B: 1.0}, 0.6))
+
+	var lights []*light.Point
+	i := 0
+	for ang := 0.0; ang < 2*pi; ang += deg60 {
+		lights = append(lights, light.NewPoint(&math32.Color{R: 0.9, G: 0.9, B: 1}, 500000.0))
+		lights[i].SetPosition(float32(-2000*cos(ang)), 2000, float32(2000*sin(ang)))
+		scene.Add(lights[i])
+		i++
+	}
 
 	//steps := 0
 
@@ -203,7 +215,42 @@ func main() {
 	wiremat.SetWireframe(true)
 	//wiremat.SetSide(material.SideDouble)
 
+	var normals *gl.LineSet
+
+	// ██████╗  ██████╗  ██████╗ ██████╗
+	// ██╔══██╗██╔═══██╗██╔═══██╗██╔══██╗
+	// ██║  ██║██║   ██║██║   ██║██████╔╝
+	// ██║  ██║██║   ██║██║   ██║██╔══██╗
+	// ██████╔╝╚██████╔╝╚██████╔╝██║  ██║
+	// ╚═════╝  ╚═════╝  ╚═════╝ ╚═╝  ╚═╝
+
+	//	doorColour := gl.Blue
+	//	var doorPatch v3.Patch
+	//	var doorLines []gl.ColourLine
+	var door *gl.LineSet
+	var doorWidth v3.Meters = 8 * ft2m
+	var doorHeight v3.Meters = 8 * ft2m
+	// var doorWide = v3.X.Scale(8 * ft2m)
+	// var doorHigh = v3.Z.Scale(8 * ft2m)
+	var doorA *Door
+
+	// ███████╗███████╗████████╗██╗   ██╗██████╗
+	// ██╔════╝██╔════╝╚══██╔══╝██║   ██║██╔══██╗
+	// ███████╗█████╗     ██║   ██║   ██║██████╔╝
+	// ╚════██║██╔══╝     ██║   ██║   ██║██╔═══╝
+	// ███████║███████╗   ██║   ╚██████╔╝██║
+	// ╚══════╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝
+
+	// mylines := []gl.ColourLine{
+	// 	{Start: v3.Origin, End: v3.X.Scale(7), Colour: &gl.White},
+	// 	{Start: v3.Origin, End: v3.X.Scale(7).Add(v3.Y.Scale(5)), Colour: &gl.Yellow},
+	// }
+	// mls := gl.NewLineSet(mylines)
+
 	setupFunc := func() {
+
+		// mls.SetVisible(true)
+		// scene.Add(mls)
 
 		eshell.MakeMesh(desiredL, tolerance) // compute the tris
 		smat.SetWireframe(false)
@@ -211,10 +258,27 @@ func main() {
 		shellmesh.SetVisible(shell)
 		scene.Add(shellmesh)
 
-		shellmesh.normals = helper.NewNormals(shellmesh, 0.5, &math32.Color{R: 0, G: 0.7, B: 0}, 1)
-		scene.Add(shellmesh.normals)
-		shellmesh.normals.SetVisible(norms)
+		// Normals display
+		var ns []gl.ColourLine
+		for _, p := range eshell.Panels {
+			if !p.Alive {
+				continue
+			}
+			p.Update(&eshell)
+			ns = append(ns, gl.ColourLine{Start: p.Center, End: p.Center.Add(p.Normal.Scale(0.3)), Colour: &gl.Green})
+		}
+		for _, v := range eshell.Vertices {
+			if !v.Alive {
+				continue
+			}
+			v.ComputeNormal()
+			ns = append(ns, gl.ColourLine{Start: v.Position, End: v.Position.Add(v.Normal.Scale(0.2)), Colour: &gl.Olive})
+		}
+		normals = gl.NewLineSet(ns, 1)
+		scene.Add(normals)
+		normals.SetVisible(norms)
 
+		// Main shell in wireframe
 		wireframe = eshell.PrepLines(wiremat)
 		wireframe.SetVisible(wire)
 		scene.Add(wireframe)
@@ -224,9 +288,13 @@ func main() {
 		scene.Add(eloid)
 
 		// Door tool 1
-		doorPatch := v3.NewPatch(v3.NewSimVec(0, 0, eshell.Base),
-			v3.X, v3.Y.Scale(8*ft2m), v3.Z.Scale(8*ft2m))
-		door := NewGLPatch(doorPatch, doorColour)
+		doorA = NewDoor(&eshell, doorWidth, doorHeight)
+		door = gl.NewLineSet(doorA.Display(), 3)
+
+		// doorPatch = v3.NewPatch(v3.Y.Scale(eshell.E.W+1).Add(v3.Z.Scale(eshell.Base)), v3.Y.Scale(-1), doorWide, doorHigh)
+		// doorLines = gl.LinesForPatch(doorPatch, true, doorColour)
+		// door = gl.NewLineSet(doorLines, 3)
+
 		scene.Add(door)
 
 		// Ground
@@ -285,7 +353,7 @@ func main() {
 
 		oldDebugs := eshell.DebugLines // preserve the debugs
 
-		ellipsoid := ell.Ellipsoid{}
+		ellipsoid = ell.Ellipsoid{}
 		ellipsoid.Set(semiWidth, semiLength, semiHeight)
 		eshell = EShell{E: ellipsoid, DebugLines: oldDebugs}
 
@@ -295,56 +363,15 @@ func main() {
 		eshell.FlangeWidth = 0.05 // 50 mm flanges when doubled over
 
 		scene.Remove(shellmesh)
-		eshell.MakeMesh(desiredL, tolerance) // compute the tris
-		shellmesh = eshell.Prep(smat)
-		shellmesh.SetVisible(shell)
-		scene.Add(shellmesh)
-
 		scene.Remove(wireframe)
-		wireframe = eshell.PrepLines(wiremat) // convert to opengl tris
-		wireframe.SetVisible(wire)
-		scene.Add(wireframe)
-
 		scene.Remove(shellmesh.normals)
-		shellmesh.normals = helper.NewNormals(shellmesh, 0.5, &math32.Color{R: 0, G: 0.7, B: 0}, 1)
-		shellmesh.normals.SetVisible(norms)
-		scene.Add(shellmesh.normals)
-
 		scene.Remove(eloid)
-		eloid = ellipsoid.LatLong(60, 60, 100, wht)
-		eloid.SetVisible(ellipy)
-		scene.Add(eloid)
-
-		scene.Remove(grid)
-		gry := math32.Color{R: 0.2, G: 0.2, B: 0.2}
-		grid = helper.NewGrid(20, 0.5, &gry)
-		grid.TranslateY(float32(eshell.Base))
-		grid.SetVisible(wire)
-		scene.Add(grid)
-
-		// Ground
 		scene.Remove(ground)
-		// tex0, err := texture.NewTexture2DFromImage("Nextgen_grass.jpg")
-		// if err != nil {
-		// 	log.Fatalf("Error loading texture: %s", err)
-		// }
-		// tex0.SetWrapS(gls.REPEAT)
-		// tex0.SetWrapT(gls.REPEAT)
-		// tex0.SetRepeat(100, 100)
-		// mat0 := material.NewStandard(&math32.Color{R: 1, G: 1, B: 1})
-		// mat0.AddTexture(tex0)
-		// mat0.SetSide(material.SideBack)
-		// groundGeom := geometry.NewSegmentedCube(100, 2)
-		// ground = graphic.NewMesh(groundGeom, nil)
-		// ground.AddGroupMaterial(mat0, 0)
-		// ground.RotateZ(-deg90)
-		// ground.SetPositionY(50 + float32(eshell.Base))
-		// ground.SetVisible(shell)
-		scene.Add(ground)
+		scene.Remove(grid)
+		scene.Remove(door)
+		scene.Remove(normals)
 
-		stats.SetText(eshell.Stats(cam.Materials))
-
-		//scramble = false
+		setupFunc()
 
 	}
 
@@ -407,7 +434,7 @@ func main() {
 	normsBtn.SetSize(40, 18)
 	normsBtn.Subscribe(gui.OnClick, func(name string, ev interface{}) {
 		norms = !norms
-		shellmesh.normals.SetVisible(norms)
+		normals.SetVisible(norms)
 	})
 	mygui.Add(normsBtn)
 
@@ -527,16 +554,47 @@ func main() {
 
 	a.Subscribe(window.OnMouseDown, onMouseDown)
 
-	scene.Add(light.NewAmbient(&math32.Color{R: 1.0, G: 1.0, B: 1.0}, 0.6))
+	onKey := func(evname string, ev interface{}) {
+		// var state bool
+		// if evname == window.OnKeyDown {
+		// 	state = true
+		// } else {
+		// 	state = false
+		// }
+		kev := ev.(*window.KeyEvent)
 
-	var lights []*light.Point
-	i := 0
-	for ang := 0.0; ang < 2*pi; ang += deg60 {
-		lights = append(lights, light.NewPoint(&math32.Color{R: 0.9, G: 0.9, B: 1}, 5000.0))
-		lights[i].SetPosition(float32(-200*cos(ang)), 200, float32(200*sin(ang)))
-		scene.Add(lights[i])
-		i++
+		if (kev.Key == window.KeyW) || (kev.Key == window.KeyA) || (kev.Key == window.KeyS) || (kev.Key == window.KeyD) || (kev.Key == window.KeyQ) || (kev.Key == window.KeyE) {
+
+			scene.Remove(door)
+
+			switch kev.Key {
+			case window.KeyW:
+				doorA.Translate(doorA.Normal.Scale(0.1))
+			case window.KeyS:
+				doorA.Translate(doorA.Normal.Scale(-0.1))
+			case window.KeyD:
+				doorA.Translate(doorA.Wide.Normalized().Scale(0.1))
+			case window.KeyA:
+				doorA.Translate(doorA.Wide.Normalized().Scale(-0.1))
+			case window.KeyE:
+				doorA.RotateZ(v3.Deg2Rad(2.5))
+			case window.KeyQ:
+				doorA.RotateZ(v3.Deg2Rad(-2.5))
+			}
+
+			//			doorA = NewDoor(&eshell, doorWidth, doorHeight)
+			door = gl.NewLineSet(doorA.Display(), 3)
+
+			// doorLines = gl.LinesForPatch(doorPatch, true, doorColour)
+			// door = gl.NewLineSet(doorLines, 3)
+			scene.Add(door)
+
+		}
+
 	}
+
+	a.Subscribe(window.OnKeyDown, onKey)
+	a.Subscribe(window.OnKeyRepeat, onKey)
 
 	scene.Add(helper.NewAxes(0.5))
 
@@ -651,104 +709,3 @@ func MakeDebugs() *DebugLines {
 	d := &DebugLines{}
 	return d
 }
-
-// if scramble || (steps > 0) {
-// 	//	eshell.RemoveShortEdges(desiredL * 0.8)
-// 	eshell.CalcTensions(desiredL, 0.1)
-// 	eshell.MoveVertices(ellipsoid, 0.01, 0.955)
-// 	eshell.Step++
-// 	redraw = true
-// 	steps--
-// }
-// if redraw {
-// 	scene.Remove(shellmesh)
-// 	shellmesh = eshell.Prep(smat)
-// 	scene.Add(shellmesh)
-// 	stats.SetText(eshell.Stats(gauges, densities))
-// 	redraw = false
-// }
-
-// spotLight := light.NewSpot(&math32.Color{R: 0.9, G: 0.9, B: 1}, 10000.0)
-// spotLight.SetPosition(40, 40, 40)
-// spotLight.SetDirection(-1, -1, -1)
-// spotLight.SetVisible(true)
-// scene.Add(spotLight)
-
-// for _, v := range s.Vertices {
-// 	fmt.Println(v.NiceString())
-// }
-
-// for _, ed := range s.Edges {
-// 	fmt.Println(ed.NiceString())
-// }
-
-// for _, p := range s.Panels {
-// 	fmt.Println(p.NiceString())
-// }
-
-// eshell.MakeMesh(desiredL, tolerance) // compute the tris
-// shellmesh = eshell.Prep(smat)        // convert to opengl tris
-// scene.Add(shellmesh)
-
-// Scramble button
-// scrambleBtn := gui.NewButton("Scramble")
-// var scramble bool // run the sim
-//var redraw bool   // redraw the mesh
-// scrambleBtn.SetPosition(50, 40)
-// scrambleBtn.SetSize(40, 18)
-// scrambleBtn.Subscribe(gui.OnClick, func(name string, ev interface{}) {
-// 	scramble = !scramble
-// })
-// mygui.Add(scrambleBtn)
-
-// Some local aliases
-// pi := math.Pi
-// cos := math.Cos
-// sin := math.Sin
-// deg60 := pi / 3
-
-// btnVisFunc := func(text string, toggle *bool, thing core.INode) {
-// 	visBtn := gui.NewButton(text)
-// 	visBtn.SetPosition(col1, row)
-// 	visBtn.SetSize(40, 18)
-// 	row += 22
-// 	visBtn.Subscribe(gui.OnClick, func(name string, ev interface{}) {
-// 		*toggle = !*toggle
-// 		thing.SetVisible(*toggle)
-// 	})
-// 	mygui.Add(visBtn)
-// }
-
-// btnVisFunc("Wireframe", &wire, wireframe)
-// btnVisFunc("Shell", &shell, shellmesh)
-// btnVisFunc("Ellipsoid", &ellipy, eloid)
-
-//btnVisFunc("Normals", &norms, shellmesh.normals)
-
-// Ground
-// tex0, err := texture.NewTexture2DFromImage("Nextgen_grass.jpg")
-// if err != nil {
-// 	log.Fatalf("Error loading texture: %s", err)
-// }
-// mat0 := material.NewStandard(&math32.Color{R: 1, G: 1, B: 1})
-// mat0.AddTexture(tex0)
-// mat0.SetSide(material.SideDouble)
-// groundGeom := geometry.NewSegmentedCube(100, 2)
-// ground := graphic.NewMesh(groundGeom, nil)
-// ground.AddGroupMaterial(mat0, 0)
-// ground.SetVisible(true)
-// ground.RotateZ(-deg90)
-// ground.SetPositionY(50 + float32(eshell.Base))
-
-// scene.Add(ground)
-// fname, ok, err := dlgs.File("Select filename for export", "*.stl", false)
-// 		if err != nil {
-// 			fmt.Println("Error displaying file dialog")
-// 			return
-// 		}
-// 		if !ok {
-// 			fmt.Println("No filename chosen")
-// 			return
-// 		}
-// 		fmt.Printf("Filename chosen: %s\n", fname)
-// 	})

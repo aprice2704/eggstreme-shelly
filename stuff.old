@@ -1,3 +1,153 @@
+	
+// if scramble || (steps > 0) {
+// 	//	eshell.RemoveShortEdges(desiredL * 0.8)
+// 	eshell.CalcTensions(desiredL, 0.1)
+// 	eshell.MoveVertices(ellipsoid, 0.01, 0.955)
+// 	eshell.Step++
+// 	redraw = true
+// 	steps--
+// }
+// if redraw {
+// 	scene.Remove(shellmesh)
+// 	shellmesh = eshell.Prep(smat)
+// 	scene.Add(shellmesh)
+// 	stats.SetText(eshell.Stats(gauges, densities))
+// 	redraw = false
+// }
+
+// spotLight := light.NewSpot(&math32.Color{R: 0.9, G: 0.9, B: 1}, 10000.0)
+// spotLight.SetPosition(40, 40, 40)
+// spotLight.SetDirection(-1, -1, -1)
+// spotLight.SetVisible(true)
+// scene.Add(spotLight)
+
+// for _, v := range s.Vertices {
+// 	fmt.Println(v.NiceString())
+// }
+
+// for _, ed := range s.Edges {
+// 	fmt.Println(ed.NiceString())
+// }
+
+// for _, p := range s.Panels {
+// 	fmt.Println(p.NiceString())
+// }
+
+// eshell.MakeMesh(desiredL, tolerance) // compute the tris
+// shellmesh = eshell.Prep(smat)        // convert to opengl tris
+// scene.Add(shellmesh)
+
+// Scramble button
+// scrambleBtn := gui.NewButton("Scramble")
+// var scramble bool // run the sim
+//var redraw bool   // redraw the mesh
+// scrambleBtn.SetPosition(50, 40)
+// scrambleBtn.SetSize(40, 18)
+// scrambleBtn.Subscribe(gui.OnClick, func(name string, ev interface{}) {
+// 	scramble = !scramble
+// })
+// mygui.Add(scrambleBtn)
+
+// Some local aliases
+// pi := math.Pi
+// cos := math.Cos
+// sin := math.Sin
+// deg60 := pi / 3
+
+// btnVisFunc := func(text string, toggle *bool, thing core.INode) {
+// 	visBtn := gui.NewButton(text)
+// 	visBtn.SetPosition(col1, row)
+// 	visBtn.SetSize(40, 18)
+// 	row += 22
+// 	visBtn.Subscribe(gui.OnClick, func(name string, ev interface{}) {
+// 		*toggle = !*toggle
+// 		thing.SetVisible(*toggle)
+// 	})
+// 	mygui.Add(visBtn)
+// }
+
+// btnVisFunc("Wireframe", &wire, wireframe)
+// btnVisFunc("Shell", &shell, shellmesh)
+// btnVisFunc("Ellipsoid", &ellipy, eloid)
+
+//btnVisFunc("Normals", &norms, shellmesh.normals)
+
+// Ground
+// tex0, err := texture.NewTexture2DFromImage("Nextgen_grass.jpg")
+// if err != nil {
+// 	log.Fatalf("Error loading texture: %s", err)
+// }
+// mat0 := material.NewStandard(&math32.Color{R: 1, G: 1, B: 1})
+// mat0.AddTexture(tex0)
+// mat0.SetSide(material.SideDouble)
+// groundGeom := geometry.NewSegmentedCube(100, 2)
+// ground := graphic.NewMesh(groundGeom, nil)
+// ground.AddGroupMaterial(mat0, 0)
+// ground.SetVisible(true)
+// ground.RotateZ(-deg90)
+// ground.SetPositionY(50 + float32(eshell.Base))
+
+// scene.Add(ground)
+// fname, ok, err := dlgs.File("Select filename for export", "*.stl", false)
+// 		if err != nil {
+// 			fmt.Println("Error displaying file dialog")
+// 			return
+// 		}
+// 		if !ok {
+// 			fmt.Println("No filename chosen")
+// 			return
+// 		}
+// 		fmt.Printf("Filename chosen: %s\n", fname)
+// 	})
+
+	
+	
+	// eshell.MakeMesh(desiredL, tolerance) // compute the tris
+		// shellmesh = eshell.Prep(smat)
+		// shellmesh.SetVisible(shell)
+		// scene.Add(shellmesh)
+
+		// wireframe = eshell.PrepLines(wiremat) // convert to opengl tris
+		// wireframe.SetVisible(wire)
+		// scene.Add(wireframe)
+
+		// shellmesh.normals = helper.NewNormals(shellmesh, 0.5, &math32.Color{R: 0, G: 0.7, B: 0}, 1)
+		// shellmesh.normals.SetVisible(norms)
+		// scene.Add(shellmesh.normals)
+
+		// eloid = ellipsoid.LatLong(60, 60, 100, wht)
+		// eloid.SetVisible(ellipy)
+		// scene.Add(eloid)
+
+		// gry := math32.Color{R: 0.2, G: 0.2, B: 0.2}
+		// grid = helper.NewGrid(20, 0.5, &gry)
+		// grid.TranslateY(float32(eshell.Base))
+		// grid.SetVisible(wire)
+		// scene.Add(grid)
+
+		// Ground
+		// tex0, err := texture.NewTexture2DFromImage("Nextgen_grass.jpg")
+		// if err != nil {
+		// 	log.Fatalf("Error loading texture: %s", err)
+		// }
+		// tex0.SetWrapS(gls.REPEAT)
+		// tex0.SetWrapT(gls.REPEAT)
+		// tex0.SetRepeat(100, 100)
+		// mat0 := material.NewStandard(&math32.Color{R: 1, G: 1, B: 1})
+		// mat0.AddTexture(tex0)
+		// mat0.SetSide(material.SideBack)
+		// groundGeom := geometry.NewSegmentedCube(100, 2)
+		// ground = graphic.NewMesh(groundGeom, nil)
+		// ground.AddGroupMaterial(mat0, 0)
+		// ground.RotateZ(-deg90)
+		// ground.SetPositionY(50 + float32(eshell.Base))
+		// ground.SetVisible(shell)
+		// scene.Add(ground)
+
+		// stats.SetText(eshell.Stats(cam.Materials))
+
+		//scramble = false
+
 
 // TestIntersects tests the intersect function
 // func (e *EShell) TestIntersects(n int) {
@@ -258,3 +408,70 @@
 // 	}
 // 	return some
 // }
+
+// s0 := pa.Sides[0]
+// 	l0 := s0.Length()
+// 	s0N := s0.Normalized()
+
+// 	s1 := pa.Sides[1]
+// 	l1 := s1.Length()
+// 	s1N := s1.Normalized()
+
+// 	D := whu.Subtract(pa.Corner)
+// 	d := D.Length()
+
+// 	d0 := D.Dot(s0N)
+// 	d1 := D.Dot(s1N)
+
+// 	//	fmt.Printf("D and projs: %s, %6.3f vs %6.3f OR %6.3f vs %6.3f\n", D, d0, l0, d1, l1)
+
+// 	if (d0 > l0) || (d0 <= 0) || (d1 > l1) || (d1 <= 0) {
+// 		fmt.Println("Early bail")
+// 		return where, false
+// 	}
+
+// 	cosTheta := s0N.Dot(s1N)
+// 	//	theta := math.Acos(cosTheta)
+// 	//	fmt.Printf("theta: %5.2f,  alpha: %5.2f, beta: %5.2f\n", theta*r2d, math.Acos(d0/d)*r2d, math.Acos(d1/d)*r2d)
+
+// 	if (d0 + d1) > d*(1+cosTheta) {
+// 		fmt.Printf("D and projs: %s, d0: %6.3f d1: %6.3f  d0+d1: %6.3f vs d*(1+cosT) %6.3f\n", D, d0, d1, d0+d1, d*(1+cosTheta))
+// 		return where, false
+// 	}
+
+// 	// if (math.Acos(d0/d) > theta) || (math.Acos(d1/d) > theta) {
+// 	// 	return where, false
+// 	// }
+
+// 	//lTot := d0/l0 + d1/l1       // sum of the sides as fractions of sides
+// 	//	limit := 1.0 + s0N.Dot(s1N) // i.e. 1+cos(theta) scaled to D
+
+// 	// if lTot > limit {
+// 	// 	return where, false
+// 	// }
+
+// 	fmt.Println("HIT!")
+
+// Barycenter technique
+// Compute vectors
+// v0 = C - A
+// v1 = B - A
+// v2 = P - A
+
+// // Compute dot products
+// dot00 = dot(v0, v0)
+// dot01 = dot(v0, v1)
+// dot02 = dot(v0, v2)
+// dot11 = dot(v1, v1)
+// dot12 = dot(v1, v2)
+
+// // Compute barycentric coordinates
+// invDenom = 1 / (dot00 * dot11 - dot01 * dot01)
+// u = (dot11 * dot02 - dot01 * dot12) * invDenom
+// v = (dot00 * dot12 - dot01 * dot02) * invDenom
+
+// // Check if point is in triangle
+// return (u >= 0) && (v >= 0) && (u + v < 1)
+//   For a triangle with sides ~a, ~b and origin ~O any point ~p in it obeys:
+//      norm(~p-~O).norm(~a) + norm(~p-~O).norm(b~) < 1 + cos(theta)
+//   where theta is the angle between ~a & ~b.

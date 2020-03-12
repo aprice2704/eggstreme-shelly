@@ -29,17 +29,15 @@ var (
 type EShell struct {
 	E           ell.Ellipsoid // Ellipsoid shape on which this is based
 	Base        float64       // Z=base is bottom plane
-	Vertices    []Vertex      // all of them, indexed by int serial #
-	Edges       []Edge        // all of them, indexed by int serial #
-	Panels      []Panel       // all of them, indexed by int serial #
+	Vertices    []*Vertex     // all of them
+	Edges       []*Edge       // all of them
+	Panels      []*Panel      // all of them
 	PanelSize   float64       // desired panelsize during initial tessellation
 	Tolerance   float64       // tolerance during panel edge length estimation
 	FlangeWidth float64       // normal flange width expected for this design
 	Step        int           //moribund?
 	Cuts        []CutSegment  //TODO
 	DebugLines  []DebugLine   //TODO
-	// showSegs    []v3.Segment
-	// showTris    []v3.Patch
 }
 
 // EShellMesh is just the g3n mesh
@@ -88,13 +86,6 @@ type Vertex struct {
 	Constraints Constraints
 }
 
-// NiceString returns one to look at
-// func (v Vertex) NiceString() string {
-// 	s := fmt.Sprintf("Vertex %d has %d edges %s and %d panels %s",
-// 		v.Serial, len(v.Edges), List2String(v.Edges), len(v.Panels), List2String(v.Panels))
-// 	return s
-// }
-
 // OnEllipsoid forces the vertex to be on the surface of the ellipsoid
 var OnEllipsoid = func(e *EShell, p v3.Vec) v3.Vec {
 	return e.E.Surface(p)
@@ -118,15 +109,13 @@ func (v *Vertex) Move(p v3.Vec) v3.Vec {
 
 // ComputeNormal averages the normals of the panels for this vertex and stores it
 func (v *Vertex) ComputeNormal() {
-	n := 0
 	tot := v.Position.New(0, 0, 0)
 	for _, panel := range v.Panels {
 		if panel.Alive {
-			n++
 			tot = tot.Add(panel.Normal)
 		}
 	}
-	v.Normal = tot.Scale(1 / float64(n))
+	v.Normal = tot.Normalized()
 }
 
 // NiceString is a human readable one
@@ -279,9 +268,10 @@ type PanelAccessoryType int
 
 // Panel is a single triangular panel of the structure
 type Panel struct {
-	Serial      int                // id number
-	Corners     []*Vertex          // indexes into Vertices
-	Edges       []*Edge            // indexes into Edges
+	Serial      int       // id number
+	Corners     []*Vertex // indexes into Vertices
+	Edges       []*Edge   // indexes into Edges
+	Center      v3.SimVec
 	Normal      v3.SimVec          // Normal, pointing away from origin
 	InitNormal  v3.SimVec          // for flip detection
 	Area        float64            // area in m2 of the outer extent of this panel
@@ -310,7 +300,19 @@ func (p *Panel) Update(e *EShell) {
 	}
 	crx := p.Edges[0].Along.Cross(p.Edges[1].Along)
 	p.Area = crx.Length() / 2
-	p.Normal = crx.Normalized().(v3.SimVec)
+	if crx.Dot(p.Corners[0].Position) > 0 {
+		p.Normal = crx.Normalized().(v3.SimVec)
+	} else {
+		p.Normal = crx.Normalized().Scale(-1).(v3.SimVec)
+	}
+	if len(p.Corners) > 0 {
+		t := v3.Zero
+		for _, c := range p.Corners {
+			t = t.Add(c.Position).(v3.SimVec)
+		}
+		p.Center = t.Scale(1 / float64(len(p.Corners))).(v3.SimVec)
+	}
+
 }
 
 // NiceString returns one to look at
@@ -399,7 +401,7 @@ func (ed Edge) HasVertex(v *Vertex) bool {
 // 	return p, dry
 // }
 
-// append only if value is not already in the list
+// append panel if value is not already in the list
 func appendUniquePanel(l []*Panel, x *Panel) []*Panel {
 	for _, v := range l {
 		if x.Serial == v.Serial {
@@ -409,7 +411,7 @@ func appendUniquePanel(l []*Panel, x *Panel) []*Panel {
 	return append(l, x)
 }
 
-// append only if value is not already in the list
+// append vertex if value is not already in the list
 func appendUniqueVertex(l []*Vertex, x *Vertex) []*Vertex {
 	for _, v := range l {
 		if x.Serial == v.Serial {
@@ -421,6 +423,9 @@ func appendUniqueVertex(l []*Vertex, x *Vertex) []*Vertex {
 
 // AddPanel adds one to a shell
 func (e *EShell) AddPanel(es []*Edge) *Panel {
+	if len(es) != 3 {
+		log.Fatal("GEOMETRY ERROR: Trying to make a panel without 3 edges")
+	}
 	p := Panel{Accessory: PAtypePlain} // assume plain to begin with
 	p.Edges = es
 	crx := es[0].Along.Cross(es[1].Along)
@@ -434,22 +439,22 @@ func (e *EShell) AddPanel(es []*Edge) *Panel {
 	p.Shell = e
 	p.Serial = len(e.Panels)
 	p.Alive = true
-	for _, f := range p.Edges { // record the new panel on each edge
-		f.Panels = appendUniquePanel(f.Panels, &p)
-		for _, v := range f.Vertices { // record the new panel on each vertex
+	for _, ed := range p.Edges { // record the new panel on each edge
+		ed.Panels = appendUniquePanel(ed.Panels, &p)
+		for _, v := range ed.Vertices { // record the new panel on each vertex
 			v.Panels = appendUniquePanel(v.Panels, &p)
 			p.Corners = appendUniqueVertex(p.Corners, v)
 		}
 	}
-	e.Panels = append(e.Panels, p)
-	fmt.Printf("%s\n", p.NiceString())
+	e.Panels = append(e.Panels, &p)
+	//	fmt.Printf("%s\n", p.NiceString())
 	return &p
 }
 
 // AddVertex adds one to a shell
 func (e *EShell) AddVertex(v v3.Vec, cs Constraints) *Vertex {
 	newV := Vertex{Position: v.(v3.SimVec), Serial: len(e.Vertices), Alive: true}
-	e.Vertices = append(e.Vertices, newV)
+	e.Vertices = append(e.Vertices, &newV)
 	return &newV
 }
 
@@ -483,10 +488,11 @@ func (e *EShell) AddEdge(vs []*Vertex) *Edge {
 	al := vs[1].Position.Subtract(vs[0].Position)
 	eno := len(e.Edges)
 	newE := Edge{Vertices: vs, Along: al, Length: al.Length(), Serial: eno, Alive: true}
-	e.Edges = append(e.Edges, newE)
+	e.Edges = append(e.Edges, &newE)
 	for _, v := range vs {
 		v.Edges = appendUniqueEdge(v.Edges, &newE)
 	}
+	//	fmt.Printf("New edge %s\n", e.Edges[eno].NiceString())
 	return &newE
 }
 
@@ -495,7 +501,7 @@ func (e *EShell) AntiSpike() bool {
 	var any bool
 NextEdge:
 	for _, ed := range e.Edges {
-		edge1 := &ed
+		edge1 := ed
 		if len(ed.Panels) == 1 && ed.Alive == true {
 			for _, v := range ed.Vertices {
 				var v6s []*Vertex
@@ -504,7 +510,7 @@ NextEdge:
 				}
 				for _, v6 := range v6s { // all the v6s
 					for _, edge2 := range v6.Edges {
-						if (edge2 != edge1) && len(edge2.Panels) == 1 { // we have some winners!
+						if (edge2.Serial != edge1.Serial) && len(edge2.Panels) == 1 { // we have some winners!
 							if v6.Position.Z() > e.Base { // only for dry v6's
 								newEdge := e.AddEdge([]*Vertex{edge1.OtherEnd(v6), edge2.OtherEnd(v6)})
 								e.AddPanel([]*Edge{edge1, newEdge, edge2})
@@ -537,10 +543,11 @@ func (e *EShell) Spike(desiredL float64, tolerance float64) bool {
 						(v.Position.Z() > e.Base) ||
 						(edge.Vertices[1].Position.Z() > e.Base) {
 						newV := e.AddVertex(newPoint, Constraints{&OnEllipsoid})
+						//						fmt.Printf("New vertex for spike %s\n", newV.NiceString())
 						edge2 := e.AddEdge([]*Vertex{v, newV})
 						edge3 := e.AddEdge([]*Vertex{newV, edge.Vertices[1]})
-						p := e.AddPanel([]*Edge{&edge, edge2, edge3})
-						fmt.Printf("Spike!!:%s\n", p.NiceString())
+						e.AddPanel([]*Edge{edge, edge2, edge3})
+						//						fmt.Printf("Spike!!:%s\n", p.NiceString())
 						any = true
 						break
 					}
@@ -554,8 +561,7 @@ func (e *EShell) Spike(desiredL float64, tolerance float64) bool {
 // FillIn tris
 func (e *EShell) FillIn(desiredL float64, tolerance float64) bool {
 	var any bool
-	for _, vV := range e.Vertices {
-		vertex := &vV
+	for _, vertex := range e.Vertices {
 		if len(vertex.Edges) == 5 && vertex.Alive == true && (vertex.Position.Z() > e.Base) { // 5 edges
 			var twoEdges []*Edge
 			for _, e := range vertex.Edges {
@@ -691,8 +697,6 @@ func (e *EShell) Prep(mat *material.Standard) *EShellMesh {
 
 	geom := geometry.NewGeometry()
 	positions := math32.NewArrayF32(0, 2*3*3*len(e.Panels)) //
-	normals := math32.NewArrayF32(0, 3*3*len(e.Panels))
-	//	colours := math32.NewArrayF32(0, 3*3*len(e.Panels))
 	indices := math32.NewArrayU32(0, 3*len(e.Panels))
 	var idx uint32 // running index of the vertices
 
@@ -723,10 +727,6 @@ func (e *EShell) Prep(mat *material.Standard) *EShellMesh {
 			positions = appendXZY(positions, vs[1].Position)
 			positions = appendXZY(positions, vs[2].Position)
 
-			normals = appendXZY(normals, panel.Normal)
-			normals = appendXZY(normals, panel.Normal)
-			normals = appendXZY(normals, panel.Normal)
-
 			indices = append(indices, idx, idx+1, idx+2)
 			idx += 3
 		}
@@ -734,61 +734,10 @@ func (e *EShell) Prep(mat *material.Standard) *EShellMesh {
 
 	geom.SetIndices(indices)
 	geom.AddVBO(gls.NewVBO(positions).AddAttrib(gls.VertexPosition))
-	geom.AddVBO(gls.NewVBO(normals).AddAttrib(gls.VertexNormal))
-	//	geom.AddVBO(gls.NewVBO(colours).AddAttrib(gls.VertexColor))
 
 	shell := EShellMesh{}
 	shell.Mesh.Init(geom, mat)
 	return &shell
-}
-
-// GLPatch is a visible patch
-type GLPatch struct {
-	graphic.Lines
-}
-
-// NewGLPatch makes a new visible asset for the given patch
-func NewGLPatch(p v3.Patch, colour math32.Color) *GLPatch {
-
-	mat := material.NewBasic()
-
-	pat := geometry.NewGeometry()
-	buff := math32.NewArrayF32(0, 4*2*2)
-
-	a := p.Corner
-	b := a.Add(p.Sides[0])
-	c := a.Add(p.Sides[1])
-	d := b.Add(p.Sides[1])
-
-	buff = appendXZY(buff, a)
-	buff = appendColour(buff, colour)
-	buff = appendXZY(buff, b)
-	buff = appendColour(buff, colour)
-
-	buff = appendXZY(buff, a)
-	buff = appendColour(buff, colour)
-	buff = appendXZY(buff, c)
-	buff = appendColour(buff, colour)
-
-	buff = appendXZY(buff, b)
-	buff = appendColour(buff, colour)
-	buff = appendXZY(buff, d)
-	buff = appendColour(buff, colour)
-
-	buff = appendXZY(buff, c)
-	buff = appendColour(buff, colour)
-	buff = appendXZY(buff, d)
-	buff = appendColour(buff, colour)
-
-	pat.AddVBO(gls.NewVBO(buff).
-		AddAttrib(gls.VertexPosition).
-		AddAttrib(gls.VertexColor),
-	)
-
-	glpat := GLPatch{}
-	glpat.Init(pat, mat)
-	return &glpat
-
 }
 
 // STLString returns an STL representation of the panels in the shell
@@ -797,7 +746,9 @@ func (e EShell) STLString() string {
 	// for i := 0; i < 3; i++ {
 	// 	p := e.Panels[i]
 	for _, p := range e.Panels {
-		s += p.STLString()
+		if p.Alive {
+			s += p.STLString()
+		}
 	}
 	s += "endsolid Eggstreme\n"
 	return s
@@ -863,9 +814,9 @@ func (e EShell) Stats(mats cam.MaterialSet) string {
 	// }
 
 	l2gal := 0.264172
-	beadVol := 1000 * (totPerim / 2) * 0.003 * 0.003 * math.Pi / 4
+	beadVol := 1000 * (totPerim / 2) * 0.004 * 0.004 * math.Pi / 4
 
-	s += fmt.Sprintf("Total panel perimeter: %5.1f' (%5.1fm), 3mm bead volume: %.2gl (%.2ggal)\n", totPerim*m2ft, totPerim, beadVol, beadVol*l2gal)
+	s += fmt.Sprintf("Total panel perimeter: %5.1f' (%5.1fm), 4mm bead volume: %.2gl (%.2ggal)\n", totPerim*m2ft, totPerim, beadVol, beadVol*l2gal)
 	// Floor area calcs
 	floorX := e.E.XGivenYZ(0, e.Base)
 	floorY := e.E.YGivenXZ(0, e.Base)
@@ -888,14 +839,14 @@ func (e EShell) Stats(mats cam.MaterialSet) string {
 // AddEdges adds a bunch of them from vertex numbers
 func (e *EShell) AddEdges(el [][]int) {
 	for _, l := range el {
-		e.AddEdge([]*Vertex{&e.Vertices[l[0]], &e.Vertices[l[1]]})
+		e.AddEdge([]*Vertex{e.Vertices[l[0]], e.Vertices[l[1]]})
 	}
 }
 
 // AddPanels adds a bunch of them from panel numbers
 func (e *EShell) AddPanels(el [][]int) {
 	for _, l := range el {
-		e.AddPanel([]*Edge{&e.Edges[l[0]], &e.Edges[l[1]], &e.Edges[l[2]]})
+		e.AddPanel([]*Edge{e.Edges[l[0]], e.Edges[l[1]], e.Edges[l[2]]})
 	}
 }
 
@@ -921,12 +872,17 @@ func (e *EShell) MakeMesh(desiredL float64, tolerance float64) {
 	e.AddPanels([][]int{{6, 0, 7}, {7, 1, 8}, {8, 2, 9}, {9, 3, 10}, {10, 4, 11}, {11, 5, 6}})
 	didSomething := true
 	for didSomething {
-		//	a := e.AntiSpike()
-		//	b := e.FillIn(desiredL, tolerance)
-		a := true
-		b := true
+		a := e.AntiSpike()
+		b := e.FillIn(desiredL, tolerance)
+		// a := true
+		// b := true
 		c := e.Spike(desiredL, tolerance)
-		break
+		// fmt.Print("\n\n\n")
+		// for _, p := range e.Panels {
+		// 	fmt.Printf("%s\n", p.NiceString())
+		// }
+		// e.PrintGeometryProblems()
+		// break
 		didSomething = a || b || c
 	}
 
@@ -963,7 +919,7 @@ func (e *EShell) PruneEdges(lengthLim float64) {
 	var shorts []edgeRef
 
 	for _, edi := range e.Edges {
-		ed := &edi
+		ed := edi
 		eNo := ed.Serial
 		if ed.Alive && (ed.Length < lengthLim) {
 			shorts = append(shorts, edgeRef{serial: eNo, length: ed.Length})
@@ -978,13 +934,25 @@ func (e *EShell) PruneEdges(lengthLim float64) {
 
 }
 
-// CutPatch cuts all of the panels that intersect the given patch, tags the edges so formed with et
-func (e *EShell) CutPatch(p v3.Patch, et EdgeTreatment) {
+// CalcCutPatch computes all the cuts of the panels that intersect the given patch
+// func (e *EShell) CalcCutPatch(patch v3.Patch) (panels []*Panel, cutLines []v3.Segment) {
+// panels = []*Panel{}
+// 	for _, p := range e.Panels {
+// 		cutEnds := []v3.Vec{}
+// 		for _, ed := range p.Edges {
+// 			v := ed.Vertices[0]
+// 			f := ed.From(v)
+// 			l := v3.NewLine(v.Position, f)
+// 			s := v3.NewSegment(l, 0.0, f.Length())
+// 			//			e.DebugLines = append(e.DebugLines, DebugLine{Start: s.Start().Scale(1.01), End: s.End().Scale(1.01), Colour: debug})
+// 			intersect, itsCut := patch.IntersectSegment(s)
+// 			if itsCut {
+// 				cutEnds = append(cutEnds, intersect)
+// 				//		e.DebugLines = append(e.DebugLines, DebugLine{Start: v3.Origin, End: intersect, Colour: DebugPurple})
+// 			}
+// 		}
 
-	// for pNo := range e.Panels {
-	// }
-
-}
+// }
 
 // CutFloor cuts off all panels projecting below the floor
 func (e *EShell) CutFloor() {
@@ -1031,7 +999,7 @@ func (e *EShell) CutFloor() {
 				e.AddPanel([]*Edge{eNew0, eNew1, eNew2})
 				e.AddPanel([]*Edge{eNew2, eNew3, eNew4})
 			}
-			e.RemovePanel(&p)
+			e.RemovePanel(p)
 		} else {
 			if len(cutEnds) != 0 {
 				fmt.Printf("ERROR: Panel %d has %d cut ends\n", p.Serial, len(cutEnds))
@@ -1043,8 +1011,7 @@ func (e *EShell) CutFloor() {
 
 // CalcTensions computes the tension/compression in each edge
 func (e *EShell) CalcTensions(desired float64, k float64) {
-	for _, edV := range e.Edges {
-		ed := &edV
+	for _, ed := range e.Edges {
 		if ed.Alive {
 			ed.Along = ed.Vertices[1].Position.Subtract(ed.Vertices[0].Position)
 			ed.Tension = k * math.Pow((ed.Along.Length()-desired), 5) // tension = +ve
@@ -1057,7 +1024,7 @@ func (e *EShell) MoveVertices(elli ell.Ellipsoid, moveFactor float64, slowFactor
 	for _, v := range e.Vertices {
 		var f v3.SimVec
 		for _, ed := range v.Edges {
-			if &v == ed.Vertices[0] {
+			if v == ed.Vertices[0] {
 				f = f.Add(ed.Along.Normalized().Scale(ed.Tension)).(v3.SimVec)
 			} else {
 				f = f.Add(ed.Along.Normalized().Scale(-ed.Tension)).(v3.SimVec)
@@ -1084,7 +1051,7 @@ func (e *EShell) IntersectsPanels(seg v3.Segment) (panels []*Panel, wheres []v3.
 	dsides := math32.Color{R: 0, G: 1, B: 1}
 	showSegs = append(showSegs, seg)
 	for i := 0; i < len(e.Panels); i++ {
-		p := &e.Panels[i]
+		p := e.Panels[i]
 		ed := p.Edges[0]
 		v := ed.Vertices[0]
 		v1 := ed.Vertices[1]
@@ -1113,8 +1080,7 @@ func (e *EShell) IntersectsPanels(seg v3.Segment) (panels []*Panel, wheres []v3.
 
 // CheckGeometry does some basic checks on shell geometry
 func (e *EShell) CheckGeometry() {
-	for _, vV := range e.Vertices {
-		v := &vV
+	for _, v := range e.Vertices {
 		ne := len(v.Edges)
 		if ne < 2 {
 			err := tracerr.Errorf("Geometry error: vertex %d is on an incorrect number of edges: %d", v.Serial, ne)
@@ -1128,8 +1094,7 @@ func (e *EShell) CheckGeometry() {
 			log.Fatal(err)
 		}
 	}
-	for _, edV := range e.Edges {
-		ed := &edV
+	for _, ed := range e.Edges {
 		nv := len(ed.Vertices)
 		if nv != 2 {
 			err := tracerr.Errorf("Geometry error: edge %d should have 2 vertices, has %d (%v)", ed.Serial, nv, ed.Vertices)
@@ -1143,8 +1108,7 @@ func (e *EShell) CheckGeometry() {
 			log.Fatal(err)
 		}
 	}
-	for _, pV := range e.Panels {
-		p := &pV
+	for _, p := range e.Panels {
 		nv := len(p.Corners)
 		if nv != 3 {
 			err := tracerr.Errorf("Geometry error: Panel %d should have 3 corners, has %d (%v)", p.Serial, nv, p.Corners)
@@ -1156,6 +1120,41 @@ func (e *EShell) CheckGeometry() {
 			err := tracerr.Errorf("Geometry error: panel %d should have 3 edges, has %d (%v)", p.Serial, ne, p.Edges)
 			tracerr.PrintSourceColor(err, 5, 2)
 			log.Fatal(err)
+		}
+	}
+
+}
+
+// PrintGeometryProblems is
+func (e *EShell) PrintGeometryProblems() {
+	for _, v := range e.Vertices {
+		ne := len(v.Edges)
+		if ne < 2 {
+			fmt.Printf("Geometry error: vertex %d is on an incorrect number of edges: %d\n", v.Serial, ne)
+		}
+		np := len(v.Panels)
+		if np > 6 || ne < 1 {
+			fmt.Printf("Geometry error: vertex %d is on an incorrect number of panels: %d\n", v.Serial, np)
+		}
+	}
+	for _, ed := range e.Edges {
+		nv := len(ed.Vertices)
+		if nv != 2 {
+			fmt.Printf("Geometry error: edge %d should have 2 vertices, has %d\n", ed.Serial, nv)
+		}
+		np := len(ed.Panels)
+		if np > 2 || np < 1 {
+			fmt.Printf("Geometry error: edge %d should be on 1 or 2 panels, is on %d\n", ed.Serial, np)
+		}
+	}
+	for _, p := range e.Panels {
+		nv := len(p.Corners)
+		if nv != 3 {
+			fmt.Printf("Geometry error: Panel %d should have 3 corners, has %d\n", p.Serial, nv)
+		}
+		ne := len(p.Edges)
+		if ne != 3 {
+			fmt.Printf("Geometry error: panel %d should have 3 edges, has %d\n", p.Serial, ne)
 		}
 	}
 
