@@ -8,6 +8,7 @@ import (
 
 	cam "./cam"
 	ell "./ellipsoid"
+	gl "./gl"
 	v3 "./vec"
 
 	"github.com/g3n/engine/geometry"
@@ -1158,6 +1159,27 @@ func (e *EShell) PrintGeometryProblems() {
 		}
 	}
 
+}
+
+// CutWithPatch removes the parts of panels in the direction of the normal of the patch
+func (e *EShell) CutWithPatch(pat v3.Patch) []gl.ColourLine {
+	cuts := []gl.ColourLine{}
+	for _, pan := range e.Panels {
+		if pan.Alive {
+			hits := []v3.Vec{}
+			for _, ed := range pan.Edges {
+				seg := v3.NewSegment(v3.NewLine(ed.Vertices[0].Position, ed.Along), 0, 1)
+				where, hit := pat.ParaIntersectSegment(seg)
+				if hit {
+					hits = append(hits, where)
+				}
+			}
+			if len(hits) == 2 { // two sides cut
+				cuts = append(cuts, gl.ColourLine{Start: hits[0], End: hits[1], Colour: &gl.Red})
+			}
+		}
+	}
+	return cuts
 }
 
 // ██╗   ██╗████████╗██╗██╗     ███████╗

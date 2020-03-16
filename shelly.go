@@ -289,7 +289,7 @@ func main() {
 
 		// Door tool 1
 		doorA = NewDoor(&eshell, doorWidth, doorHeight)
-		door = gl.NewLineSet(doorA.Display(), 3)
+		door = gl.NewLineSet(doorA.Display(&eshell), 3)
 
 		// doorPatch = v3.NewPatch(v3.Y.Scale(eshell.E.W+1).Add(v3.Z.Scale(eshell.Base)), v3.Y.Scale(-1), doorWide, doorHigh)
 		// doorLines = gl.LinesForPatch(doorPatch, true, doorColour)
@@ -573,9 +573,9 @@ func main() {
 			case window.KeyS:
 				doorA.Translate(doorA.Normal.Scale(-0.1))
 			case window.KeyD:
-				doorA.Translate(doorA.Wide.Normalized().Scale(0.1))
-			case window.KeyA:
 				doorA.Translate(doorA.Wide.Normalized().Scale(-0.1))
+			case window.KeyA:
+				doorA.Translate(doorA.Wide.Normalized().Scale(0.1))
 			case window.KeyE:
 				doorA.RotateZ(v3.Deg2Rad(2.5))
 			case window.KeyQ:
@@ -583,7 +583,7 @@ func main() {
 			}
 
 			//			doorA = NewDoor(&eshell, doorWidth, doorHeight)
-			door = gl.NewLineSet(doorA.Display(), 3)
+			door = gl.NewLineSet(doorA.Display(&eshell), 3)
 
 			// doorLines = gl.LinesForPatch(doorPatch, true, doorColour)
 			// door = gl.NewLineSet(doorLines, 3)

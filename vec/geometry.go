@@ -12,8 +12,11 @@ import (
 	"math"
 )
 
+// Very short lengths
 const (
-	mayAsWellBeZero = 1e-40
+	PlanckLength    = 1e-12 // 1fM
+	PlanckFactor    = 1 + PlanckLength
+	mayAsWellBeZero = 1e-12
 )
 
 // Manipulations of simple geometrical things
@@ -161,6 +164,16 @@ func (p *Plane) Translate(by Vec) *Plane {
 	return p
 }
 
+// NormalSide returns true iff the given point is on
+//   the side of the plane to which the normal points
+func (p Plane) NormalSide(poi Vec) bool {
+	r := poi.Subtract(p.PointOn).Dot(p.Normal)
+	if r < 0 {
+		return false
+	}
+	return true
+}
+
 // ██████╗  █████╗ ████████╗ ██████╗██╗  ██╗
 // ██╔══██╗██╔══██╗╚══██╔══╝██╔════╝██║  ██║
 // ██████╔╝███████║   ██║   ██║     ███████║
@@ -254,16 +267,23 @@ func (pa Patch) TriIntersectSegment(s Segment) (where Vec, hits bool) {
 //   intersects the parallelagram defined by the sides of this patch,
 //   and if so, where. hits = false -> line is parallel to plane.
 func (pa Patch) ParaIntersectSegment(s Segment) (where Vec, hits bool) {
+
 	whu, anyHit := pa.Plane.IntersectSegment(s) // does the segment intersect my containing plane?
 	if !anyHit {                                // nope, bail
 		return where, false
 	}
-	diff := pa.Corner.Subtract(whu).Normalized()
-	for _, side := range pa.Sides {
-		d := diff.Dot(side)
-		if d > side.Length() { // outside the parallelagram
-			return where, false
-		}
+
+	b := pa.Corner.Add(pa.Sides[0])
+	c := pa.Corner.Add(pa.Sides[1])
+
+	if inTriangle(whu, pa.Corner, b, c) {
+		return whu, true
 	}
-	return whu, true
+
+	if inTriangle(whu, b, b.Add(pa.Sides[1]), c) {
+		return whu, true
+	}
+
+	return where, false
+
 }

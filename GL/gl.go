@@ -84,7 +84,7 @@ func LinesForPatch(p v3.Patch, norm bool, colour math32.Color) []ColourLine {
 
 	if norm {
 		e := a.Add(d).Scale(0.5)
-		f := e.Add(p.Normal.Scale((p.Sides[0].Length() + p.Sides[1].Length()) / 4))
+		f := e.Add(p.Normal.Scale(0.5)) //(p.Sides[0].Length() + p.Sides[1].Length()) / 4))
 		lines = append(lines, ColourLine{Start: e, End: f, Colour: &White})
 	}
 

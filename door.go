@@ -48,7 +48,7 @@ type Clamp int
 
 // Door is a door UI with associated geometry
 type Door struct {
-	v3.Cutter
+	*v3.Cutter
 	Name          string
 	Width, Height v3.Meters
 	Opens         DoorOpens
@@ -79,7 +79,7 @@ func NewDoor(eshell *EShell, width v3.Meters, height v3.Meters) *Door {
 	d := Door{Width: width, Height: height, Clamps: clps,
 		Kind: Hole, Opens: AlwaysOpen}
 
-	p := v3.Y.Scale(eshell.E.W + 1).Add(v3.Z.Scale(eshell.Base))
+	p := v3.Y.Scale(eshell.E.W + 1).Add(v3.Z.Scale(eshell.Base * 1.3))
 	//	a := v3.Deg90
 	d.Cutter = v3.NewCutter(width, height, p, v3.Y.Scale(-1))
 	d.Shell = eshell
@@ -91,6 +91,7 @@ func NewDoor(eshell *EShell, width v3.Meters, height v3.Meters) *Door {
 
 // Translate by a vector
 func (d *Door) Translate(v v3.Vec) *Door {
+	//	fmt.Printf("Delta %s\n", v)
 	d.Cutter = v3.NewCutter(d.Width, d.Height, d.Corner.Add(v), d.Normal)
 	return d
 }
@@ -139,7 +140,7 @@ func (d *Door) DoClamps() {
 //pos := v3.NewSimVec(e.W*v3.Sin(a)*1.1, e.L*v3.Cos(a)*1.1, bf).Subtract(c.Wide.Scale(0.5))
 
 // Display generates the lines to display a door
-func (d *Door) Display() []gl.ColourLine {
+func (d *Door) Display(e *EShell) []gl.ColourLine {
 
 	ls := []gl.ColourLine{}
 
@@ -147,6 +148,7 @@ func (d *Door) Display() []gl.ColourLine {
 
 	for _, p := range d.Cutter.Walls {
 		ls = append(ls, gl.LinesForPatch(p, true, gl.Blue)...)
+		ls = append(ls, e.CutWithPatch(p)...)
 	}
 
 	return ls
